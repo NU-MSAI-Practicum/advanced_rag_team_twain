@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pickle import Pickler, Unpickler
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
@@ -7,25 +8,37 @@ RAW_TRAIN_DATA_PATH = 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63
 RAW_TEST_DATA_PATH = 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet'
 
 
-def join_original_contexts(dataset_path):
-    df = pd.read_parquet(dataset_path).head(2) # For testing purposes
+def get_original_contexts(dataset_path):
+    df = pd.read_parquet(dataset_path) # For testing purposes
     return df['context'].array
 
 def split_into_documents(dataset_path):
     
-    original_contexts = join_original_contexts(dataset_path)
+    original_contexts = get_original_contexts(dataset_path)
 
-    documents = []
-    for original_context in original_contexts:
-        # https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/
-        text_splitter = RecursiveCharacterTextSplitter(
+    # https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/
+    text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=200, # TODO: determine optimal chunk size
-            chunk_overlap=20,
-        )
-        documents.extend(text_splitter.create_documents(original_context))
+            chunk_overlap=20,)
+    documents = text_splitter.create_documents(original_contexts)
     return documents
     
+def save_documents(documents, dir, train, chunk_size, chunk_overlap):
+    dataset = 'train' if train else 'test'
+    filename = f'{dir}/{dataset}_size_{chunk_size}_overlap_{chunk_overlap}_documents.pkl'
+    with open(filename, 'wb') as file:
+        Pickler(file).dump(documents)
+        file.flush()
+
+def load_documents(filename):
+    with open(filename, 'rb') as file:
+        return Unpickler(file).load()
 
 if __name__ == '__main__':
-    documents = split_into_documents(RAW_TRAIN_DATA_PATH)
-    print(len(documents))
+    chunk_size = 200
+    chunk_overlap = 20
+    for dataset_path in [RAW_TRAIN_DATA_PATH, RAW_TEST_DATA_PATH]:
+        documents = split_into_documents(dataset_path)
+        save_documents(documents, 'documents', 'train' in dataset_path, chunk_size, chunk_overlap)
+    
+  

@@ -1,2 +1,4 @@
 .DS_Store
 /rag-dataset-12000
+/documents/*
+/local_embeddings/*
