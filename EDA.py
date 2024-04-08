@@ -25,16 +25,15 @@ def EDA():
             print(f'  {col}')
 
             # Average Length
-            context_lengths = df['context'].str.len()
-            print(f'    Average {col} Length: {context_lengths.mean()}')
+            lengths = df[col].str.len()
+            print(f'    Average {col} Length: {lengths.mean()}')
 
             # Max Length
-            context_lengths = df['context'].str.len()
-            print(f'    Max {col} Length: {context_lengths.max()}')
+            print(f'    Max {col} Length: {lengths.max()}')
 
             # Length Distribution
             fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-            sns.histplot(context_lengths, ax=ax)
+            sns.histplot(lengths, ax=ax)
             ax.set_title(f'{dataset} {col.capitalize()} Length Distribution')
             ax.set_xlabel(f'{dataset} {col.capitalize()} Length')
             ax.set_ylabel('Frequency')
