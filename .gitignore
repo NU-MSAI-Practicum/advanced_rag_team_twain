@@ -2,3 +2,4 @@
 /rag-dataset-12000
 /documents/*
 /local_embeddings/*
+__pycache__/
