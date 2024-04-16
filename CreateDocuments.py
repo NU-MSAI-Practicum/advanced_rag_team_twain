@@ -10,17 +10,19 @@ RAW_TEST_DATA_PATH = 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a
 
 def get_original_contexts(dataset_path):
     df = pd.read_parquet(dataset_path) # For testing purposes
+    df = df.iloc[7952:7952+1] # For testing purposes
     return df['context'].array
 
-def split_into_documents(dataset_path):
+def split_into_documents(dataset_path, chunk_size, chunk_overlap):
     
     original_contexts = get_original_contexts(dataset_path)
 
     # https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/
     text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=200, # TODO: determine optimal chunk size
-            chunk_overlap=20,)
+            chunk_size=chunk_size, # TODO: determine optimal chunk size
+            chunk_overlap=chunk_overlap,)
     documents = text_splitter.create_documents(original_contexts)
+   
     return documents
     
 def save_documents(documents, dir, train, chunk_size, chunk_overlap):
@@ -35,10 +37,10 @@ def load_documents(filename):
         return Unpickler(file).load()
 
 if __name__ == '__main__':
-    chunk_size = 200
-    chunk_overlap = 20
+    chunk_size = 1001
+    chunk_overlap = 200
     for dataset_path in [RAW_TRAIN_DATA_PATH, RAW_TEST_DATA_PATH]:
-        documents = split_into_documents(dataset_path)
+        documents = split_into_documents(dataset_path, chunk_size, chunk_overlap)
         save_documents(documents, 'documents', 'train' in dataset_path, chunk_size, chunk_overlap)
     
   
