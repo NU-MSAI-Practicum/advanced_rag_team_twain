@@ -7,7 +7,7 @@
 
 `$ pip install -r requirements.txt`
 
-1. Download [dataset]((https://huggingface.co/datasets/neural-bridge/rag-dataset-12000))
+1. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
 
 `# Make sure you have git-lfs installed (https://git-lfs.com)`
 `git lfs install`
