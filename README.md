@@ -1,13 +1,13 @@
 # advanced_rag_team_twain
 
 ## Setup
-0. Set up environment and packages
+1. Set up environment and packages
 
 `$ python -m venv ragenv`
 
 `$ pip install -r requirements.txt`
 
-1. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
+2. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
 
 `# Make sure you have git-lfs installed (https://git-lfs.com)`
 
@@ -15,7 +15,7 @@
 
 `$ git clone https://huggingface.co/datasets/neural-bridge/rag-dataset-12000`
 
-2. Create documents
+3. Create documents
 
 `python CreateDocuments.py`
 This will chunk the data and save it to a pickle file.
