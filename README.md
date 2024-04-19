@@ -13,4 +13,4 @@
 This will chunk the data and save it to a pickle file.
 
 ## Testing RAG system
-Current tests are in [[RAG_Testing.ipynb]]. The functionality is supported by [[RAG_utils.py]]. Initial generator testing done in [[RAG_misc_testing.ipynb]].
+Current tests are in [RAG_Testing.ipynb]. The functionality is supported by [RAG_utils.py]. Initial generator testing done in [RAG_misc_testing.ipynb].
