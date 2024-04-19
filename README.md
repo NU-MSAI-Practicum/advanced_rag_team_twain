@@ -10,8 +10,10 @@
 1. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
 
 `# Make sure you have git-lfs installed (https://git-lfs.com)`
-`git lfs install`
-`git clone https://huggingface.co/datasets/neural-bridge/rag-dataset-12000`
+
+`$ git lfs install`
+
+`$ git clone https://huggingface.co/datasets/neural-bridge/rag-dataset-12000`
 
 2. Create documents
 
