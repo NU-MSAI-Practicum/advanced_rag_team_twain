@@ -1,0 +1,9 @@
+elasticsearch:
+    mikky:
+        region: us-east-2
+        host: search-mikky-es-tkpsgqtkfdoy5kmpt4uprginoy.us-east-2.es.amazonaws.com
+        port: 443
+    practicum:
+        region: us-east-2
+        host: search-kcn5738-msai-practicum-5renmdtao2ribrht3jkdqbl75e.us-east-2.es.amazonaws.com
+        port: 443
