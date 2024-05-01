@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 from pickle import Pickler, Unpickler
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 RAW_TRAIN_DATA_PATH = 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet'
 RAW_TEST_DATA_PATH = 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet'
 
 
-# NOTE: ONLY USING THREE CONTEXTS NOW FOR TESTING PURPOSES
 def get_original_contexts(dataset_path):
     """
     Loads the dataset and returns the 'context' column as a numpy array.
@@ -22,9 +22,9 @@ def get_original_contexts(dataset_path):
         An array containing the 'context' column.
     """
 
-    df = pd.read_parquet(dataset_path) # For testing purposes
-    print(df.shape)
-    df = df.iloc[[7937, 7952, 7771]] # For testing purposes
+    df = pd.read_parquet(dataset_path)
+    #print(df.shape)
+    #df = df.iloc[[7937, 7952, 7771]] # For testing purposes
     return df['context'].array
 
 def split_into_documents(dataset_path, chunk_size, chunk_overlap):
@@ -83,13 +83,56 @@ def load_documents(filename):
     """
     with open(filename, 'rb') as file:
         return Unpickler(file).load()
+    
+
+def create_embeddings(documents, model_name):
+    """
+    Creates embeddings for the documents using the HuggingFaceEmbeddings from LangChain.
+
+    Args:
+        documents (list): The list of documents.
+        model_name (string): The name of the model to use for the embeddings.
+
+    Returns:
+        A list of embeddings (list of lists).
+    """
+    embedding_model = HuggingFaceEmbeddings(model_name=model_name, show_progress=True)
+    doc_func = lambda x: x.page_content
+    docs = list(map(doc_func, documents))
+    doc_embeddings = embedding_model.embed_documents(docs) 
+    return doc_embeddings
+
+
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+
+
+from sentence_transformers import SentenceTransformer
+
+def create_embeddings_from_sentence_transformer(documents, model_name='sentence-transformers/all-MiniLM-L6-v2'):
+    """
+    Creates embeddings for the documents using the SentenceTransformer from HuggingFace (no LangChain).
+
+    Args:
+        documents (list): The list of documents.
+        model_name (string): The name of the model to use for the embeddings.
+
+    Returns:
+        A list of embeddings (tensor).
+    """
+
+    model = SentenceTransformer(model_name)
+    embeddings = model.encode([doc.page_content for doc in documents], convert_to_tensor=True)
+    return embeddings
+
 
 if __name__ == '__main__':
     chunk_size = 1000
     chunk_overlap = 200
     #for dataset_path in [RAW_TRAIN_DATA_PATH, RAW_TEST_DATA_PATH]:
     for dataset_path in [RAW_TRAIN_DATA_PATH]:
-        # if 'train' in dataset_path:
-        #     dataset = 'train'
         documents = split_into_documents(dataset_path, chunk_size, chunk_overlap)
-        save_documents(documents, 'documents', 'train' in dataset_path, chunk_size, chunk_overlap)
+        #save_documents(documents, 'documents', 'train' in dataset_path, chunk_size, chunk_overlap)
+        embeddings = create_embeddings(documents, 'all-MiniLM-L6-v2')
+        # Alternatively, use generate directly from HF (returns tensors)
+        # embeddings2 = create_embeddings_from_sentence_transformer(documents, 'sentence-transformers/all-MiniLM-L6-v2')
