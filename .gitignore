@@ -1,5 +1,7 @@
 .DS_Store
+ragenv/
+__pycache__/
 /rag-dataset-12000
 /documents/*
 /local_embeddings/*
-__pycache__/
+/chroma/*
