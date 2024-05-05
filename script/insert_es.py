@@ -5,28 +5,29 @@ from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 from elasticsearch.helpers import bulk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from utils.db import es_conn
+from utils.model import embedding_model
 
 tqdm.pandas()
 nltk.download('punkt')
-SPLIT_TEXT_METHOD = 'sentence'  # chunk or sentence
-model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+CHUNK_SIZE = 1000
+OVERLAP_SIZE = 200
+EMBEDDING_DIMENSION = 384
+SPLIT_TEXT_METHOD = 'chunk'
 
 
 def split_context_by_sentence(context):
     sentences = sent_tokenize(context)
     return sentences
 
+
 def split_context_by_chunk(context):
     # use recursive text splitting to split context into chunks
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=20,
-        length_function=len,
-        is_separator_regex=False,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=OVERLAP_SIZE
     )
-    return text_splitter.split_text([context])
+    return text_splitter.split_text(context)
 
 
 def split_context(context):
@@ -37,8 +38,9 @@ def split_context(context):
 
 
 def batch_actions(actions, batch_size):
+    total_batches = (len(actions) + batch_size - 1) // batch_size
     for i in range(0, len(actions), batch_size):
-        yield actions[i:i + batch_size]
+        yield i // batch_size, actions[i:i + batch_size], total_batches
 
 
 def insert_data_bulk(df, index_name):
@@ -55,10 +57,8 @@ def insert_data_bulk(df, index_name):
             }
             actions.append(body)
     batch_size = 500
-    i = 0
-    for batch in batch_actions(actions, batch_size):
-        print (i)
-        i += 1
+    for batch_index, batch, total_batches in batch_actions(actions, batch_size):
+        print(f"Processing batch {batch_index+1}/{total_batches}")
         bulk(es_conn, batch)
         time.sleep(1)
 
@@ -66,7 +66,7 @@ def insert_data_bulk(df, index_name):
 def embed_sentence(sentences):
     vectors = []
     for sentence in sentences:
-        vector = model.embed_query(sentence)
+        vector = embedding_model.embed_query(sentence)
         vectors.append(vector)
     return vectors
 
@@ -93,7 +93,7 @@ def insert_vector_bulk(index_name):
           "properties": {
              "vector": {
                 "type": "knn_vector",
-                "dimension": 384
+                "dimension": EMBEDDING_DIMENSION
              },
              "doc_id": {
                 "type": "text"
@@ -122,13 +122,11 @@ def insert_vector_bulk(index_name):
             documents.append(body)
 
     # insert in batches
-    batch_size = 200
-    i = 0
-    for batch in batch_actions(documents, batch_size):
-        print(i)
+    batch_size = 200  # be careful of request limitation
+    for batch_index, batch, total_batches in batch_actions(documents, batch_size):
+        print(f"Processing batch {batch_index + 1}/{total_batches}")
         bulk(es_conn, batch)
-        time.sleep(3)  # be careful of requestion limit
-        i += 1
+        time.sleep(3)  # be careful of request limitation
 
 
 if __name__ == "__main__":
@@ -136,10 +134,12 @@ if __name__ == "__main__":
     train_df = pd.read_parquet(RAW_TRAIN_DATA_PATH)
 
     # # insert texts
-    index_name = "rag-dataset-12000-train"
-    insert_data_bulk(train_df, index_name)
+    # SPLIT_TEXT_METHOD = 'sentence'
+    # index_name = "rag-dataset-12000-train"
+    # insert_data_bulk(train_df, index_name)
 
-    # # insert vectors
+    # insert vectors
     # index_name = "rag-dataset-12000-train-vector"
+    # SPLIT_TEXT_METHOD = 'chunk'  # chunk or sentence
     # generate_embeddings(train_df, index_name)
     # insert_vector_bulk(index_name)

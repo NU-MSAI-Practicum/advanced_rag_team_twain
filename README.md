@@ -1,24 +1,36 @@
 # advanced_rag_team_twain
 
-## Setup
-1. Set up environment and packages
+## Local Development Setup
+1. Open a terminal and navigate to your project folder.
 
-`$ python -m venv ragenv`
+`$ cd advanced_rag_team_twain`
 
-`$ pip install -r requirements.txt`
+2. In your terminal, type:
 
-2. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
+`$ python -m venv .venv`
 
-`# Make sure you have git-lfs installed (https://git-lfs.com)`
+3. A folder named ".venv" will appear in your project. This directory is where your virtual environment and its dependencies are installed.
 
-`$ git lfs install`
 
-`$ git clone https://huggingface.co/datasets/neural-bridge/rag-dataset-12000`
+4. In your terminal, activate your environment with one of the following commands, depending on your operating system.
 
-3. Create documents
+`$ source .venv/bin/activate`
 
-`python CreateDocuments.py`
-This will chunk the data and save it to a pickle file.
+5. Download necessary packages
 
-## Testing RAG system
-Current tests are in [RAG_testing.ipynb](RAG_testing.ipynb). The functionality is supported by [RAG_utils.py](RAG_utils.py). Initial generator testing done in [RAG_misc_testing.ipynb](RAG_misc_testing.ipynb).
+`$ pip install -r requirements. txt`
+
+6. Run your Streamlit app.
+
+`$ python -m streamlit run app.py`
+
+7. To stop the Streamlit server, press `Ctrl+C` in the terminal.
+
+
+8. When you're done using this environment, return to your normal shell by typing:
+
+`$ deactivate`
+
+## Deployment Setup
+
+TBD
