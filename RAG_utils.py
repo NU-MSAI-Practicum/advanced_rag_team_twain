@@ -1,4 +1,3 @@
-
 from CreateDocuments import load_documents
 
 # embeddings
@@ -18,7 +17,7 @@ from langchain_community.llms import HuggingFaceHub
 
 
 
-def create_chroma_db(doc_path='documents/train_size_1000_overlap_200_documents.pkl', collection_name="rag_demo_collection"):
+def create_chroma_db(doc_path='documents/train_size_1000_overlap_200_documents_sample.pkl', collection_name="rag_demo_collection"):
     """
     Create a Chroma database from a list of documents.
     Initializes the databse with chromadb (instead of langchain_community.vectorstores.Chroma) to enable more functionalities (e.g., peek()).
@@ -37,7 +36,14 @@ def create_chroma_db(doc_path='documents/train_size_1000_overlap_200_documents.p
     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     persistent_client = chromadb.PersistentClient()
-    persistent_client.delete_collection(collection_name)
+    
+    # Clear the collection if it exists
+    try:
+        persistent_client.delete_collection(collection_name)
+    except Exception as e:
+        print(f"Error deleting collection: {e}")
+
+
     collection = persistent_client.get_or_create_collection(collection_name)
 
     # Make langchain Chroma object from the collection
@@ -109,7 +115,22 @@ def load_lm_and_tokenizer(lm_name, config_updates=None, device_name="cpu"):
 
     return lm, tokenizer
 
-def gen_text_hf_local(lm, tokenizer, prompt_template, context, question):
+def format_prompt(prompt_template, context, question):
+    """
+    Format the prompt with the context and question.
+
+    Args:
+        prompt_template (string): The prompt template.
+        context (string): The context.
+        question (string): The question.
+
+    Returns:
+        The formatted prompt.
+    """
+    return prompt_template.format(context=context, question=question)
+                                  
+
+def gen_text_hf_local(lm, tokenizer, prompt_text):
     """
     Generate text using the RAG model.
     Manually chains the context-question->prompt, and model for generation.
@@ -125,7 +146,7 @@ def gen_text_hf_local(lm, tokenizer, prompt_template, context, question):
         The generated text.
     """
 
-    prompt_text = prompt_template.format(context=context, question=question)
+    #prompt_text = format_prompt(prompt_template, context, question)
 
     inputs = tokenizer(prompt_text, return_tensors="pt", truncation=True, padding="max_length", max_length=1024)
     # Pass to model and get output tensors
@@ -141,7 +162,7 @@ def gen_text_hf_local(lm, tokenizer, prompt_template, context, question):
     generated_text = tokenizer.decode(predicted_token_ids, skip_special_tokens=True)
     return generated_text
 
-def gen_text_hf_api(lm_name, prompt_text):
+def gen_text_hf_api(lm_name, prompt_text, temp=0.1, top_k=30, rep_pen=1.03):
     """
     Generate text using the Hugging Face Hub.
 
@@ -159,9 +180,9 @@ def gen_text_hf_api(lm_name, prompt_text):
         huggingfacehub_api_token = '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',
         model_kwargs={
             "max_new_tokens": 250,
-            "top_k": 30,
-            "temperature": 0.1,
-            "repetition_penalty": 1.03,
+            "top_k": top_k,
+            "temperature": temp,
+            "repetition_penalty": rep_pen,
         },
     )
     
@@ -196,6 +217,72 @@ def rag_chainV2(lm, tokenizer, prompt_template, context, question):
 # def RAG_with_context(lm_name, prompt_template, question, context):
 #     lm, tokenizer = load_lm_and_tokenizer(lm_name)
 #     return rag_chain(lm, tokenizer, prompt_template, context, question)
+
+import ollama
+def gen_text_ollama_user_only(prompt_text, options=None):
+    """
+    Generate text using Ollama.
+
+    Args:
+        prompt_text (string): The prompt text.
+        options (dict): The options for the Ollama model.
+    Returns:
+        The generated text (string).
+    """
+    response = ollama.chat(model='llama3', messages=[{'role': 'user', 'content': prompt_text}], options=options)
+    return response['message']['content']
+
+def gen_text_ollama(sys_msg, user_msg, options=None):
+    """
+    Generate text using Ollama.
+
+    Args:
+        sys_msg (string): The system prompt.
+        user_msg (string): The user prompt.
+        options (dict): The options for the Ollama model.
+    Returns:
+        The generated text (string).
+    """
+    response = ollama.chat(model='llama3', messages=[{'role': 'system', 'content': sys_msg}, {'role': 'user', 'content': user_msg}], options=options)
+    return response['message']['content']
+
+'''Note: options for Ollama:
+"options": {
+    "num_keep": 5,
+    "seed": 42,
+    "num_predict": 100,
+    "top_k": 20,
+    "top_p": 0.9,
+    "tfs_z": 0.5,
+    "typical_p": 0.7,
+    "repeat_last_n": 33,
+    "temperature": 0.8,
+    "repeat_penalty": 1.2,
+    "presence_penalty": 1.5,
+    "frequency_penalty": 1.0,
+    "mirostat": 1,
+    "mirostat_tau": 0.8,
+    "mirostat_eta": 0.6,
+    "penalize_newline": true,
+    "stop": ["\n", "user:"],
+    "numa": false,
+    "num_ctx": 1024,
+    "num_batch": 2,
+    "num_gqa": 1,
+    "num_gpu": 1,
+    "main_gpu": 0,
+    "low_vram": false,
+    "f16_kv": true,
+    "vocab_only": false,
+    "use_mmap": true,
+    "use_mlock": false,
+    "rope_frequency_base": 1.1,
+    "rope_frequency_scale": 0.8,
+    "num_thread": 8
+  }
+Source: https://github.com/ollama/ollama/blob/main/docs/api.md
+'''
+
 
 if __name__ == '__main__':
     # create_chroma_db()
