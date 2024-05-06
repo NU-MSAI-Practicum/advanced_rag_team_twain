@@ -31,6 +31,32 @@
 
 `$ deactivate`
 
-## Deployment Setup
+## Local Docker Setup
 
-TBD
+1. Generate requirements, (pipreqs only generate requirements for the current project)
+
+`$ pip install pipreqs`
+
+`$ pipreqs . --ignore ".venv" `
+
+2. Build image
+
+`$ docker build -t your-image-name:tag .`
+
+3. Run image
+
+`$ docker run -d --name your-container-name -p 8501:8501 -v ~/.aws:/root/.aws your-image-name:latest`
+
+4. Visit localhost:8501 in the browser
+
+5. Cleanup work: stop container
+
+`$ docker stop test-container`
+
+6. Cleanup work: delete container
+
+`$ docker rm test-container`
+
+7. Cleanup work: delete image
+
+`$ docker rmi <image_name>:<tag> `
