@@ -52,19 +52,37 @@ def search_vector(query, index_name, num_results=1):
     return response['hits']['hits']
 
 
+def get_vector_by_fuzzy_search_doc_id(query, index_name):
+    # Use the search method with a wildcard to find documents
+    response = es_conn.search(index=index_name, body={
+        "query": {
+            "wildcard": {
+                "doc_id": f"*{query}*"  # Replace 'part_of_doc_id' with the part of the ID you know
+            }
+        }
+    })
+    return response['hits']['hits']
+
+
 if __name__ == "__main__":
     # query = "What is the main difference between the National Sample Survey (NSS) and the India Human Development Survey (IHDS) in terms of measuring India's inequality?"
     query = "When was the house at 3524 Redwing Ct, Naperville, IL 60564 last sold and for what price?"
-    # "sentence": "National Sample Survey"
-    index_name_data = "rag-dataset-12000-train"
+    # # "sentence": "National Sample Survey"
+    # index_name_data = "rag-dataset-12000-train"
     index_name_vector = "rag-dataset-12000-train-vector"
-    print ("BM25 retrieval: ")
-    response = search_data(query, index_name_data, 3)
-    for result_index, hit in enumerate(response):
-        print("*** Top-"+str(result_index+1), "*** ID:", hit['_id'], ", Score:", hit['_score'], ", Sentence:", hit['_source']['sentence'])
-    print ()
-    print ("Dense retrieval: ")
-    response = search_vector(query, index_name_vector, 3)
-    for result_index, hit in enumerate(response):
-        print("*** Top-"+str(result_index+1), "*** ID:", hit['_source']['doc_id'], ", Score:", hit['_score'], ", Sentence:", hit['_source']['sentence'])
+    # print ("BM25 retrieval: ")
+    # response = search_data(query, index_name_data, 3)
+    # for result_index, hit in enumerate(response):
+    #     print("*** Top-"+str(result_index+1), "*** ID:", hit['_id'], ", Score:", hit['_score'], ", Sentence:", hit['_source']['sentence'])
+    # print ()
+    # print ("Dense retrieval: ")
+    # response = search_vector(query, index_name_vector, 3)
+    # for result_index, hit in enumerate(response):
+    #     print("*** Top-"+str(result_index+1), "*** ID:", hit['_source']['doc_id'], ", Score:", hit['_score'], ", Sentence:", hit['_source']['sentence'])
+    # index_name_vector = "rag-dataset-12000-train-vector"
+    # query = '7952'
+    # response = get_vector_by_fuzzy_search_doc_id(query, index_name_vector)
+    # import json
+    # with open('context.json', 'w') as file:
+    #     json.dump(response, file)
 
