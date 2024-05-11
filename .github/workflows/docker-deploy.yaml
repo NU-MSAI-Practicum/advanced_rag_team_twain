@@ -14,19 +14,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          registry: advancedrag
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
-      - name: Build Docker image
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry: advancedrag
+
+      - name: Build Docker image and push to ECR
         run: |
           docker build -t advancedrag/advanced-rag-image:latest .
-          docker push advancedrag/advanced-rag-image:latest
+          docker tag advancedrag/advanced-rag-image:latest ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
 
       - name: SSH into EC2 instance
         uses: appleboy/ssh-action@master
@@ -36,15 +40,9 @@ jobs:
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           port: ${{ secrets.EC2_PORT }}
           script: |
-            # Pull the latest Docker image from Amazon ECR
-            docker pull advancedrag/advanced-rag-image:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
             
-            # Stop and remove the existing container (if exists)
             docker stop advanced-rag-demo || true
             docker rm advanced-rag-demo || true
             
-            # Run the new Docker container
-            docker run -d \
-              --name advanced-rag-demo \
-              -p 80:8501 \  # Example port mapping, adjust as needed
-              advancedrag/advanced-rag-image:latest
+            docker run -d --name advanced-rag-demo -p 80:8501 advancedrag/advanced-rag-image:latest
