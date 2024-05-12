@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Docker image and push to ECR
         run: |
-          docker build advanced-rag-image:latest .
+          docker build -t advanced-rag-image:latest .
           docker tag advanced-rag-image:latest ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
 
