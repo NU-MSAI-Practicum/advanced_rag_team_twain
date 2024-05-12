@@ -28,8 +28,8 @@ jobs:
       - name: Build Docker image and push to ECR
         run: |
           docker build -t advanced-rag-image:latest .
-          docker tag advanced-rag-image:latest ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
+          docker tag advanced-rag-image:latest ${{ steps.login-ecr.outputs.registry }}/advancedrag:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/advancedrag:latest
 
       - name: SSH into EC2 instance
         uses: appleboy/ssh-action@master
@@ -39,9 +39,9 @@ jobs:
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           port: ${{ secrets.EC2_PORT }}
           script: |
-            docker pull ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/advancedrag:latest
             
             docker stop advanced-rag-demo || true
             docker rm advanced-rag-demo || true
             
-            docker run -d --name advanced-rag-demo -p 80:8501 ${{ steps.login-ecr.outputs.registry }}/advanced-rag-image:latest
+            docker run -d --name advanced-rag-demo -p 80:8501 ${{ steps.login-ecr.outputs.registry }}/advancedrag:latest
