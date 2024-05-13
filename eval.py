@@ -54,7 +54,7 @@ def retrieve_contexts(question, opt):
         return contexts
 
     elif opt.vector_store == 'es':
-        pass # TODO: Mikky
+        pass # TODO: implement Elasticsearch retrieval
 
         return
 
