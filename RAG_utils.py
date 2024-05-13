@@ -1,4 +1,4 @@
-from CreateDocuments import load_documents
+from CreateDocuments import load_chunks
 
 # embeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -17,23 +17,23 @@ from langchain_community.llms import HuggingFaceHub
 
 
 
-def create_chroma_db(doc_path='documents/train_size_1000_overlap_200_documents_sample.pkl', collection_name="rag_demo_collection"):
+def create_chroma_db(chunks_path='chunks/train_size_1000_overlap_200.pkl', collection_name="rag_demo_collection", embedding_model="all-MiniLM-L6-v2"):
     """
-    Create a Chroma database from a list of documents.
+    Create a Chroma database from a list of chunks.
     Initializes the databse with chromadb (instead of langchain_community.vectorstores.Chroma) to enable more functionalities (e.g., peek()).
 
     Args:
-        doc_path (string): The path to the list of documents.
+        chunks_path (string): The path to the chunks.
         collection_name (string): The name of the collection in the database.
 
     Returns:
         The langchain Chroma object.
     """
 
-    docs = load_documents(doc_path)
-    print("Number of documents:", len(docs))
+    docs = load_chunks(chunks_path)
+    #print("Number of documents:", len(docs))
     
-    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
 
     persistent_client = chromadb.PersistentClient()
     
@@ -52,16 +52,50 @@ def create_chroma_db(doc_path='documents/train_size_1000_overlap_200_documents_s
         collection_name=collection_name,
         embedding_function=embedding_model,
     )
+    # Add documents to the collection in batches
+    batch_size = 100
+    for i in range(0, len(docs), batch_size):
+        langchain_chroma.add_documents(docs[i:i + batch_size])
 
-    langchain_chroma.add_documents(docs)
-    print("There are", langchain_chroma._collection.count(), "in the collection")
+    #print("There are", langchain_chroma._collection.count(), "in the collection")
 
     return langchain_chroma
 
+def access_chroma_db(collection_name, embedding_model="all-MiniLM-L6-v2"):
+    """
+    Accesses an existing Chroma collection from a database by collection name.
+    
+    Args:
+    - collection_name (str): The name of the collection to access.
+
+    Returns:
+    - Chroma: A Chroma object linked to the specified collection.
+    """
+
+    persistent_client = chromadb.PersistentClient()
+    try:
+        # Try to get the existing collection
+        collection = persistent_client.get_collection(collection_name)
+    except Exception as e:
+        print(f"Error accessing collection {collection_name}: {e}")
+        return None
+
+
+    embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
+
+    # Create a Chroma object using the existing collection
+    langchain_chroma = Chroma(
+        client=persistent_client,
+        collection_name=collection_name,
+        embedding_function=embedding_model,
+    )
+
+    #print("Accessed collection:", collection_name)
+    return langchain_chroma
 
 def format_docs(docs):
     """
-    Format a list of documents into a single string.
+    Format a list of Chroma documents into a single string.
 
     Args:
         docs (list): A list of documents.
@@ -70,6 +104,18 @@ def format_docs(docs):
         A single string containing the content of all the documents.
     """
     return "\n\n".join(doc.page_content for doc in docs)
+
+def format_contexts(contexts):
+    """
+    Format a list of contexts into a single string.
+
+    Args:
+        contexts (list): A list of contexts.
+
+    Returns:
+        A single string containing all the contexts.
+    """
+    return "\n\n".join(contexts)
 
 
 def configure_and_load_model(lm_name, config_updates=None, device_name="cpu"):
@@ -207,16 +253,6 @@ def rag_chainV2(lm, tokenizer, prompt_template, context, question):
     # Decode outputs
     generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return generated_text
-
-# def full_RAG(db, lm_name, prompt_template, question):
-#     lm, tokenizer = load_lm_and_tokenizer(lm_name)
-#     docs = db.query(question)
-#     context = format_docs(docs)
-#     return rag_chain(lm, tokenizer, prompt_template, context, question)
-
-# def RAG_with_context(lm_name, prompt_template, question, context):
-#     lm, tokenizer = load_lm_and_tokenizer(lm_name)
-#     return rag_chain(lm, tokenizer, prompt_template, context, question)
 
 import ollama
 def gen_text_ollama_user_only(prompt_text, options=None):

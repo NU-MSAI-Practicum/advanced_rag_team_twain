@@ -15,10 +15,13 @@
 
 `$ git clone https://huggingface.co/datasets/neural-bridge/rag-dataset-12000`
 
-3. Create documents
+3. Set up Ollama
+Download Ollama (see https://ollama.com/)
 
-`python CreateDocuments.py`
-This will chunk the data and save it to a pickle file.
+Download Llama3
+`$ ollama pull llama3`
 
-## Testing RAG system
-Current tests are in [RAG_testing.ipynb](RAG_testing.ipynb). The functionality is supported by [RAG_utils.py](RAG_utils.py). Initial generator testing done in [RAG_misc_testing.ipynb](RAG_misc_testing.ipynb).
+4. Build system and evaluate
+
+`python eval.py`
+This will chunk the data, build a Chroma vector store, and evaluate the RAG system.
