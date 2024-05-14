@@ -15,6 +15,15 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from langchain_community.llms import HuggingFaceHub
 
 
+def list_chroma_collections():
+    """
+    List all collections in the Chroma database.
+
+    Returns:
+    A list of collection names.
+    """
+    persistent_client = chromadb.PersistentClient()
+    return persistent_client.list_collections()
 
 
 def create_chroma_db(chunks_path='chunks/train_size_1000_overlap_200.pkl', collection_name="rag_demo_collection", embedding_model="all-MiniLM-L6-v2"):
@@ -268,7 +277,7 @@ def gen_text_ollama_user_only(prompt_text, options=None):
     response = ollama.chat(model='llama3', messages=[{'role': 'user', 'content': prompt_text}], options=options)
     return response['message']['content']
 
-def gen_text_ollama(sys_msg, user_msg, options=None):
+def gen_text_ollama(sys_msg, user_msg, model='llama3', options=None):
     """
     Generate text using Ollama.
 
@@ -279,7 +288,7 @@ def gen_text_ollama(sys_msg, user_msg, options=None):
     Returns:
         The generated text (string).
     """
-    response = ollama.chat(model='llama3', messages=[{'role': 'system', 'content': sys_msg}, {'role': 'user', 'content': user_msg}], options=options)
+    response = ollama.chat(model=model, messages=[{'role': 'system', 'content': sys_msg}, {'role': 'user', 'content': user_msg}], options=options)
     return response['message']['content']
 
 '''Note: options for Ollama:

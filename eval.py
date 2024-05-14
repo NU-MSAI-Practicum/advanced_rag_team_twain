@@ -119,7 +119,10 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
 
     '''
     start_time = time.time()
-    qa_df = pd.read_parquet(opt.dataset_path).sample(opt.sample_size, random_state=0)
+    qa_df = pd.read_parquet(opt.dataset_path)#.sample(opt.sample_size, random_state=0)
+    # first `sample_size` rows of qa_df
+    qa_df = qa_df.head(opt.sample_size)
+    
 
     if not start_from_prev:
         if os.path.exists(opt.filepath):
@@ -156,12 +159,12 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
                             #answer = "asdfasfd"
                             # append results to batch_results
                             func_name = opt.generator_funcs[k].__name__
-                            row = [j, func_name, question, answer, contexts, ground_truth_answer]
+                            row = [j, opt.chunk_size, opt.chunk_overlap, opt.document_embedder, opt.k, func_name, question, answer, contexts, ground_truth_answer]
                             batch_results.append(row)
                 
             
             # convert to dataset for evaluation
-            batch_results = pd.DataFrame(batch_results, columns=['qa_index','generator','question', 'answer', 'contexts', 'ground_truth'])
+            batch_results = pd.DataFrame(batch_results, columns=['qa_index', 'chunk_size','chunk_overlap', 'doc_embedder', 'k', 'generator','question', 'answer', 'contexts', 'ground_truth'])
             batch_results = Dataset.from_pandas(batch_results)
 
             # TODO: if multiple generators, first eval retrieval, then loop for generator evals
@@ -200,10 +203,10 @@ if __name__ == '__main__':
             'chunk_size': 1000,
             'chunk_overlap': 200,
             'k': 5,
-            'generator_funcs': [ollama3_1, zephyr_1],
+            'generator_funcs': [ollama3_1],
             'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
             'user_msg_template': """Context: {context} Question: {question}""",
-            'sample_size': 10,
+            'sample_size': 1,
             'filepath': 'evals/eval_results.csv',
             }
     opt1 = Options()
