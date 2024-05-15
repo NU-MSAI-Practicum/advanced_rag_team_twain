@@ -53,8 +53,8 @@ def retrieve_contexts(question, opt):
         contexts = [doc[0].page_content for doc in docs]
         return contexts
 
-    elif opt.vector_store == 'es':
-        pass # TODO: implement Elasticsearch retrieval
+    elif opt.vector_store == 'es-sparse':
+        pass # TODO: implement Elasticsearch retrieval # BM25
 
         return
 
@@ -97,18 +97,18 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
 
     RAGAS metrics:
     - Retrieval metrics
-        - Context Recall: The extent to which the generated context is relevant to the question (ground_truths, contexts).
+        - Context Recall: the extent to which the retrieved context aligns with the annotated answer (ground_truths, contexts).
             - Not used in this evaluation because it often does not compute.
         - Context Entity Recall: The extent to which the generated context contains relevant entities (ground_truths, contexts).
             - Not used in this evaluation because it often computes only 0 or 1.
-        - Context Relevancy: The extent to which the generated context is relevant to the question (question, contexts).
-        - Context Precision: The extent to which the generated context is precise to the question (question, ground_truths, contexts).
+        - Context Relevancy: # of relevant sentences / total # of sentences (question, contexts).
+        - Context Precision: If the most relevant contexts are ranked higher (question, ground_truths, contexts).
     - Answer/Context metrics
         - Faithfulness: The extent to which the generated answer is faithful to the context (question, context, answer).
             - Not used in this evaluation because it often computes only 1 or None.
-        - Answer Relevancy: The extent to which the generated answer is relevant to the question (question, context, answer).
+        - Answer Relevancy: assessment of completion and redundancy (question, context, answer).
     - Answer vs. Ground Truth metrics
-        - Answer Similarity: The extent to which the generated answer is similar to the ground truth answer (ground truth, answer).
+        - Answer Similarity: Cosine similarity between ground truth and answer (ground truth, answer).
         - Answer Correctness: The extent to which the generated answer is correct (ground truth, answer).
 
     Args:
