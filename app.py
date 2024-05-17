@@ -73,7 +73,20 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
+
+    start_time = time.time()
     with st.chat_message("assistant"):
-        response = st.write_stream(response_generator(prompt, retrieval_selectbox))
+        res = response_generator(prompt, retrieval_selectbox)
+        response = st.write_stream(res)
+    end_time = time.time()
+
+    execution_time = end_time - start_time
+    if execution_time > 60:
+        minutes, seconds = divmod(execution_time, 60)
+        time_display = f"**Execution Time:** {int(minutes)}m {seconds:.2f}s"
+    else:
+        time_display = f"Execution Time:** {execution_time:.2f}s"
+    st.markdown(time_display)
+
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
