@@ -14,7 +14,7 @@ from ragas.metrics import faithfulness, answer_correctness, answer_relevancy, co
 
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
-
+from utils.db.es import search_data
 
 
 def retrieve_contexts(question, opt):
@@ -22,7 +22,7 @@ def retrieve_contexts(question, opt):
     Retrieve relevant documents for a given question.
 
     If the collection does not exist, it is created.
-    
+
     Args:
         question (str): The question to retrieve relevant documents for.
         opt (Options): The options for the retrieval.
@@ -36,7 +36,7 @@ def retrieve_contexts(question, opt):
         dataset = 'test'
 
     if opt.vector_store == 'chroma':
-        
+
         collection_name = dataset + '_' + str(opt.chunk_size) + '_' + str(opt.chunk_overlap) + '_' + opt.document_embedder
         vs = RAG_utils.access_chroma_db(collection_name)
 
@@ -54,9 +54,11 @@ def retrieve_contexts(question, opt):
         return contexts
 
     elif opt.vector_store == 'es-sparse':
-        pass # TODO: implement Elasticsearch retrieval # BM25
-
-        return
+        # implement Elasticsearch retrieval # BM25
+        index_name = 'rag-dataset-12000-train'
+        k = 1
+        contexts = [context['_source']['sentence'] for context in search_data(question, index_name, k)]
+        return contexts
 
 
 def ollama3_1(question, contexts, opt):
@@ -122,7 +124,7 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
     qa_df = pd.read_parquet(opt.dataset_path)#.sample(opt.sample_size, random_state=0)
     # first `sample_size` rows of qa_df
     qa_df = qa_df.head(opt.sample_size)
-    
+
 
     if not start_from_prev:
         if os.path.exists(opt.filepath):
@@ -131,10 +133,10 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
     else:
         results_df = pd.read_csv(opt.filepath)
         start = int(results_df.shape[0] / results_df['generator'].nunique())
-    
+
     n_generators = len(opt.generator_funcs)
-    
-    
+
+
     with tqdm.tqdm(range(start, len(qa_df), batch_size), desc='Batch', file=sys.stdout) as batch_bar:
         for i in batch_bar:
             batch_df = qa_df[i:i + batch_size]
@@ -150,7 +152,7 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
                     contexts = retrieve_contexts(question, opt)
                     context = RAG_utils.format_contexts(contexts)
                     #context_results.append([i, contexts])
-                    
+
                     # Generator loop to not repeat retrieval
                     with tqdm.tqdm(range(n_generators), desc='Generator', leave=False, file=sys.stdout) as gen_bar:
                         for k in gen_bar:
@@ -161,8 +163,8 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
                             func_name = opt.generator_funcs[k].__name__
                             row = [j, opt.chunk_size, opt.chunk_overlap, opt.document_embedder, opt.k, func_name, question, answer, contexts, ground_truth_answer]
                             batch_results.append(row)
-                
-            
+
+
             # convert to dataset for evaluation
             batch_results = pd.DataFrame(batch_results, columns=['qa_index', 'chunk_size','chunk_overlap', 'doc_embedder', 'k', 'generator','question', 'answer', 'contexts', 'ground_truth'])
             batch_results = Dataset.from_pandas(batch_results)
@@ -192,11 +194,11 @@ class Options:
 
 
 if __name__ == '__main__':
-    
+
     # langchain integrates with ragas
     langchain_llm = Ollama(model="llama3")
     langchain_embeddings = OllamaEmbeddings()
-    
+
     args1 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
             'vector_store': 'chroma',
             'document_embedder': 'all-MiniLM-L6-v2',
@@ -211,7 +213,7 @@ if __name__ == '__main__':
             }
     opt1 = Options()
     opt1.make_vars(args1)
-        
+
     opt = opt1
     batch_eval(
                eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
