@@ -1,7 +1,10 @@
 # advanced_rag_team_twain
 ## Branches
+
 main : for data science development
+
 deployment-path : for deployment
+
 ## Setup
 1. Set up environment and packages
 
