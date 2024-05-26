@@ -5,6 +5,8 @@
 
 `$ python -m venv ragenv`
 
+` source ragenv/bin/activate`
+
 `$ pip install -r requirements.txt`
 
 2. Download [dataset](https://huggingface.co/datasets/neural-bridge/rag-dataset-12000)
@@ -24,4 +26,4 @@ Download Llama3
 4. Build system and evaluate
 
 `python eval.py`
-This will chunk the data, build a Chroma vector store, and evaluate the RAG system.
+This will chunk the data, build a Chroma vector store (if using Chroma), and evaluate the RAG system.

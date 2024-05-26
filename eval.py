@@ -14,8 +14,7 @@ from ragas.metrics import faithfulness, answer_correctness, answer_relevancy, co
 
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
-from utils.db.es import search_data
-
+from utils.db.es import search_data, search_vector
 
 def retrieve_contexts(question, opt):
     '''
@@ -38,7 +37,7 @@ def retrieve_contexts(question, opt):
     if opt.vector_store == 'chroma':
 
         collection_name = dataset + '_' + str(opt.chunk_size) + '_' + str(opt.chunk_overlap) + '_' + opt.document_embedder
-        vs = RAG_utils.access_chroma_db(collection_name)
+        vs = RAG_utils.access_lc_chroma_db(collection_name)
 
         # if the collection does not exist, create it
         if vs is None:
@@ -54,10 +53,16 @@ def retrieve_contexts(question, opt):
         return contexts
 
     elif opt.vector_store == 'es-sparse':
-        # implement Elasticsearch retrieval # BM25
+        # Elasticsearch retrieval BM25
         index_name = 'rag-dataset-12000-train'
         k = 1
         contexts = [context['_source']['sentence'] for context in search_data(question, index_name, k)]
+        return contexts
+    
+    elif opt.vector_store == 'es-dense':
+        # Elasticsearch retrieval Dense
+        index_name = 'rag-dataset-12000-train-vector'
+        contexts = [context['_source']['sentence'] for context in search_vector(question, index_name, opt.k)]
         return contexts
 
 
@@ -75,23 +80,6 @@ def ollama3_1(question, contexts, opt):
     '''
     user_msg = opt.user_msg_template.format(context=contexts, question=question)
     return RAG_utils.gen_text_ollama(sys_msg=opt.sys_msg, user_msg=user_msg, options={'seed':0, 'temperature':0.01})
-
-def zephyr_1(question, contexts, opt):
-    '''
-    Generate answer with Zephyr configuration 1.
-
-    Args:
-        question (str): The question to answer.
-        contexts (List[str]): The relevant contexts.
-        opt (Options): The options for the retrieval.
-
-    Returns:
-        str: The answer to the question.
-    '''
-    zephyr_prompt_template = """<system>{sys_msg}</s>\n<user>{user_msg}</s>\n<|assistant|>"""
-    user_msg = opt.user_msg_template.format(context=contexts, question=question)
-    prompt_text = zephyr_prompt_template.format(sys_msg=opt.sys_msg, user_msg=user_msg)
-    return RAG_utils.gen_text_hf_api(lm_name='HuggingFaceH4/zephyr-7b-beta', prompt_text=prompt_text, temp=0.1, top_k=30, rep_pen=1.03)
 
 def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=False):
     '''
@@ -121,10 +109,9 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
 
     '''
     start_time = time.time()
-    qa_df = pd.read_parquet(opt.dataset_path)#.sample(opt.sample_size, random_state=0)
+    qa_df = pd.read_parquet(opt.dataset_path)
     # first `sample_size` rows of qa_df
     qa_df = qa_df.head(opt.sample_size)
-
 
     if not start_from_prev:
         if os.path.exists(opt.filepath):
@@ -136,53 +123,67 @@ def batch_eval(eval_llm, eval_embeddings, opt, batch_size=10, start_from_prev=Fa
 
     n_generators = len(opt.generator_funcs)
 
-
     with tqdm.tqdm(range(start, len(qa_df), batch_size), desc='Batch', file=sys.stdout) as batch_bar:
         for i in batch_bar:
             batch_df = qa_df[i:i + batch_size]
 
-            batch_results = []
-            #context_results = []
+            batch_results_basic = []
+            batch_results_reranked = []
             with tqdm.tqdm(batch_df.iterrows(), total=batch_df.shape[0], desc='Question', leave=False, file=sys.stdout) as q_bar:
                 for j, row in q_bar:
                     question = row['question']
                     ground_truth_answer = row['answer']
+                    original_context = row['context']
 
                     # retrieve relevant documents
                     contexts = retrieve_contexts(question, opt)
                     context = RAG_utils.format_contexts(contexts)
-                    #context_results.append([i, contexts])
+
+                    # Rerank contexts
+                    reranked_contexts = RAG_utils.rerank(question, contexts, threshold=0)
+                    reranked_context = RAG_utils.format_contexts(reranked_contexts)
+                    n_reranked_contexts = len(reranked_contexts)
+                    if n_reranked_contexts == 0:
+                        reranked_contexts = ['No relevant contexts.']
 
                     # Generator loop to not repeat retrieval
                     with tqdm.tqdm(range(n_generators), desc='Generator', leave=False, file=sys.stdout) as gen_bar:
                         for k in gen_bar:
                             # generate answer with LLM
                             answer = opt.generator_funcs[k](question, context, opt).strip()
-                            #answer = "asdfasfd"
                             # append results to batch_results
                             func_name = opt.generator_funcs[k].__name__
-                            row = [j, opt.chunk_size, opt.chunk_overlap, opt.document_embedder, opt.k, func_name, question, answer, contexts, ground_truth_answer]
-                            batch_results.append(row)
+                            row = [j, opt.vector_store, opt.chunk_size, opt.chunk_overlap, opt.document_embedder, opt.k, func_name, question, original_context, contexts, ground_truth_answer, answer]
+                            batch_results_basic.append(row)
 
+                            # generate answer with reranked context
+                            reranked_answer = opt.generator_funcs[k](question, reranked_context, opt).strip()
+                            row_reranked = [j, opt.vector_store, opt.chunk_size, opt.chunk_overlap, opt.document_embedder, opt.k, n_reranked_contexts, func_name, question, original_context, reranked_contexts, ground_truth_answer, reranked_answer]
+                            batch_results_reranked.append(row_reranked)
 
             # convert to dataset for evaluation
-            batch_results = pd.DataFrame(batch_results, columns=['qa_index', 'chunk_size','chunk_overlap', 'doc_embedder', 'k', 'generator','question', 'answer', 'contexts', 'ground_truth'])
-            batch_results = Dataset.from_pandas(batch_results)
+            batch_results_basic = pd.DataFrame(batch_results_basic, columns=['qa_index', 'vector_store', 'chunk_size', 'chunk_overlap', 'doc_embedder', 'k', 'generator', 'question', 'original_context', 'contexts', 'ground_truth', 'answer'])
+            batch_results_reranked = pd.DataFrame(batch_results_reranked, columns=['qa_index', 'vector_store', 'chunk_size', 'chunk_overlap', 'doc_embedder', 'k', 'n_reranked_contexts', 'generator', 'question', 'original_context', 'contexts', 'ground_truth', 'answer'])
 
-            # TODO: if multiple generators, first eval retrieval, then loop for generator evals
-            # evaluate batch with ragas
-            batch_eval_results = ragas.evaluate(batch_results, metrics=[context_relevancy, context_precision, answer_correctness, answer_relevancy, answer_similarity], llm=eval_llm, embeddings=eval_embeddings)
+            # Evaluate basic contexts
+            batch_results_basic = Dataset.from_pandas(batch_results_basic)
+            batch_eval_results_basic = ragas.evaluate(batch_results_basic, metrics=[context_relevancy, context_precision, answer_correctness, answer_relevancy, answer_similarity], llm=eval_llm, embeddings=eval_embeddings)
+
+            # Evaluate reranked contexts
+            batch_results_reranked = Dataset.from_pandas(batch_results_reranked)
+            batch_eval_results_reranked = ragas.evaluate(batch_results_reranked, metrics=[context_relevancy, context_precision, answer_correctness, answer_relevancy, answer_similarity], llm=eval_llm, embeddings=eval_embeddings)
 
             # append batch results to file
             if not os.path.exists(opt.filepath):
-                batch_eval_results.to_pandas().to_csv(opt.filepath, mode='w', header=True, index=False)
+                batch_eval_results_basic.to_pandas().to_csv(opt.filepath, mode='w', header=True, index=False)
+                batch_eval_results_reranked.to_pandas().to_csv(opt.filepath.replace('.csv', '_reranked.csv'), mode='w', header=True, index=False)
             else:
-                batch_eval_results.to_pandas().to_csv(opt.filepath, mode='a', header=False, index=False)
+                batch_eval_results_basic.to_pandas().to_csv(opt.filepath, mode='a', header=False, index=False)
+                batch_eval_results_reranked.to_pandas().to_csv(opt.filepath.replace('.csv', '_reranked.csv'), mode='a', header=False, index=False)
 
-            # if i == 2:
-            #     break
     print('=== Evaluation complete ===')
     print('Time elapsed:', time.time() - start_time)
+
 
 class Options:
     def __init__(self) -> None:
@@ -199,22 +200,60 @@ if __name__ == '__main__':
     langchain_llm = Ollama(model="llama3")
     langchain_embeddings = OllamaEmbeddings()
 
-    args1 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
-            'vector_store': 'chroma',
-            'document_embedder': 'all-MiniLM-L6-v2',
+    # # Chroma dense retrieval
+    # args1 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+    #         'vector_store': 'chroma',
+    #         'document_embedder': 'all-MiniLM-L6-v2',
+    #         'chunk_size': 1000,
+    #         'chunk_overlap': 200,
+    #         'k': 5,
+    #         'generator_funcs': [ollama3_1],
+    #         'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
+    #         'user_msg_template': """Context: {context} Question: {question}""",
+    #         'sample_size': 1,
+    #         'filepath': 'evals/eval_results.csv',
+    #         }
+    # opt1 = Options()
+    # opt1.make_vars(args1)
+
+    # batch_eval(
+    #            eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
+    #            opt=opt1, batch_size=1, start_from_prev=False)
+    
+
+    # ES sparse retrieval
+    args2 = args1 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+            'vector_store': 'es-sparse',
+            'document_embedder': None,
             'chunk_size': 1000,
             'chunk_overlap': 200,
-            'k': 5,
+            'k': 1,
             'generator_funcs': [ollama3_1],
             'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
             'user_msg_template': """Context: {context} Question: {question}""",
-            'sample_size': 1,
-            'filepath': 'evals/eval_results.csv',
+            'sample_size': 100,
+            'filepath': 'evals/sparse_results.csv',
             }
-    opt1 = Options()
-    opt1.make_vars(args1)
+    opt2 = Options()
+    opt2.make_vars(args2)
 
-    opt = opt1
+
+    # args3 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+    #         'vector_store': 'es-dense',
+    #         'document_embedder': 'all-MiniLM-L6-v2',
+    #         'chunk_size': 1000,
+    #         'chunk_overlap': 200,
+    #         'k': 5,
+    #         'rerank': True,
+    #         'generator_funcs': [ollama3_1],
+    #         'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
+    #         'user_msg_template': """Context: {context} Question: {question}""",
+    #         'sample_size': 100,
+    #         'filepath': 'evals/es_dense_train100.csv',
+    #         }
+    # opt3 = Options()
+    # opt3.make_vars(args3)
+
     batch_eval(
                eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
-               opt=opt, batch_size=1, start_from_prev=False)
+               opt=opt2, batch_size=1, start_from_prev=False)
