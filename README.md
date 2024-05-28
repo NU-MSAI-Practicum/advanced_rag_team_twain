@@ -10,7 +10,7 @@ deployment-path : for deployment
 
 `$ python -m venv ragenv`
 
-` source ragenv/bin/activate`
+`$ source ragenv/bin/activate`
 
 `$ pip install -r requirements.txt`
 
@@ -31,4 +31,4 @@ Download Llama3
 4. Build system and evaluate
 
 `python eval.py`
-This will chunk the data, build a Chroma vector store (if using Chroma), and evaluate the RAG system.
+This will chunk the data, build a Chroma vector store (if using Chroma), and evaluate the RAG system. In the main function, predefined default options for Chroma Dense Retrieval, ES Sparse Retrieval, and ES Dense Retrieval are set up.
