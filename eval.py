@@ -222,7 +222,7 @@ if __name__ == '__main__':
     
 
     # ES sparse retrieval
-    args2 = args1 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+    args2 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
             'vector_store': 'es-sparse',
             'document_embedder': None,
             'chunk_size': 1000,
@@ -237,7 +237,12 @@ if __name__ == '__main__':
     opt2 = Options()
     opt2.make_vars(args2)
 
+    batch_eval(
+               eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
+               opt=opt2, batch_size=1, start_from_prev=False)
 
+
+    # ES dense retrieval
     # args3 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
     #         'vector_store': 'es-dense',
     #         'document_embedder': 'all-MiniLM-L6-v2',
@@ -254,6 +259,6 @@ if __name__ == '__main__':
     # opt3 = Options()
     # opt3.make_vars(args3)
 
-    batch_eval(
-               eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
-               opt=opt2, batch_size=1, start_from_prev=False)
+    # batch_eval(
+    #            eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
+    #            opt=opt3, batch_size=1, start_from_prev=False)
