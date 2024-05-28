@@ -222,43 +222,43 @@ if __name__ == '__main__':
     
 
     # ES sparse retrieval
-    args2 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
-            'vector_store': 'es-sparse',
-            'document_embedder': None,
-            'chunk_size': 1000,
-            'chunk_overlap': 200,
-            'k': 1,
-            'generator_funcs': [ollama3_1],
-            'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
-            'user_msg_template': """Context: {context} Question: {question}""",
-            'sample_size': 100,
-            'filepath': 'evals/sparse_results.csv',
-            }
-    opt2 = Options()
-    opt2.make_vars(args2)
-
-    batch_eval(
-               eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
-               opt=opt2, batch_size=1, start_from_prev=False)
-
-
-    # ES dense retrieval
-    # args3 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
-    #         'vector_store': 'es-dense',
-    #         'document_embedder': 'all-MiniLM-L6-v2',
+    # args2 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+    #         'vector_store': 'es-sparse',
+    #         'document_embedder': None,
     #         'chunk_size': 1000,
     #         'chunk_overlap': 200,
-    #         'k': 5,
-    #         'rerank': True,
+    #         'k': 1,
     #         'generator_funcs': [ollama3_1],
     #         'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
     #         'user_msg_template': """Context: {context} Question: {question}""",
     #         'sample_size': 100,
-    #         'filepath': 'evals/es_dense_train100.csv',
+    #         'filepath': 'evals/sparse_results.csv',
     #         }
-    # opt3 = Options()
-    # opt3.make_vars(args3)
+    # opt2 = Options()
+    # opt2.make_vars(args2)
 
     # batch_eval(
     #            eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
-    #            opt=opt3, batch_size=1, start_from_prev=False)
+    #            opt=opt2, batch_size=1, start_from_prev=False)
+
+
+    # ES dense retrieval
+    args3 = {'dataset_path': 'rag-dataset-12000/data/train-00000-of-00001-9df3a936e1f63191.parquet', # 'rag-dataset-12000/data/test-00000-of-00001-af2a9f454ad1b8a3.parquet',
+            'vector_store': 'es-dense',
+            'document_embedder': 'all-MiniLM-L6-v2',
+            'chunk_size': 1000,
+            'chunk_overlap': 200,
+            'k': 5,
+            'rerank': True,
+            'generator_funcs': [ollama3_1],
+            'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
+            'user_msg_template': """Context: {context} Question: {question}""",
+            'sample_size': 1,
+            'filepath': 'evals/es_dense_train_TEST.csv',
+            }
+    opt3 = Options()
+    opt3.make_vars(args3)
+
+    batch_eval(
+               eval_llm=langchain_llm, eval_embeddings=langchain_embeddings,
+               opt=opt3, batch_size=1, start_from_prev=False)

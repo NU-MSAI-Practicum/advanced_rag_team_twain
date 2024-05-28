@@ -1,7 +1,24 @@
 import boto3
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
+
+import sys
+import os
+
+# Import yaml_content from config
 from config import yaml_content
+
+# Print the current working directory for debugging purposes
+print("Current Working Directory:", os.getcwd())
+
+# Get the absolute path of the project directory
+project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+print("Project Path:", project_path)
+
+assert os.getcwd() == project_path
+
+# Add the project path to the Python path
+sys.path.append(project_path)
 
 
 def get_aws_signature():
@@ -36,8 +53,3 @@ def test_es_connection():
 
 awsauth = get_aws_signature()
 es_conn = es_connection(awsauth)
-
-if __name__ == "__main__":
-    test_es_connection()
-
-
