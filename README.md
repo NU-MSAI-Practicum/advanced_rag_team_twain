@@ -28,7 +28,11 @@ Download Ollama (see https://ollama.com/)
 Download Llama3
 `$ ollama pull llama3`
 
-4. Build system and evaluate
+4. While we recommend using Llama3 via Ollama, if you wish to use HuggingFace models, please set your HuggingFace API token.
+`os.environ['HUGGINGFACEHUB_API_TOKEN'] = 'hf...'`
+
+
+5. Build system and evaluate
 
 `python eval.py`
 This will chunk the data, build a Chroma vector store (if using Chroma), and evaluate the RAG system. In the main function, predefined default options for Chroma Dense Retrieval, ES Sparse Retrieval, and ES Dense Retrieval are set up.

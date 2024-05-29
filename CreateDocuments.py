@@ -144,12 +144,11 @@ def create_embeddings_from_sentence_transformer(chunks, model_name='sentence-tra
 if __name__ == '__main__':
     chunk_size = 1000
     chunk_overlap = 100
-    for dataset_path in [RAW_TRAIN_DATA_PATH, RAW_TEST_DATA_PATH]:
-    #for dataset_path in [RAW_TRAIN_DATA_PATH]:
+    for dataset_path in [RAW_TRAIN_DATA_PATH]:
         dataset_name = 'train' if 'train' in dataset_path else 'test'
         chunks = split_into_chunks(dataset_path, chunk_size, chunk_overlap)
         save_chunks(chunks=chunks, dir='chunks', dataset_name=dataset_name, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        #save_chunks(chunks, 'documents', dataset_name, chunk_size, chunk_overlap)
+        # save_chunks(chunks, 'documents', dataset_name, chunk_size, chunk_overlap)
         # embeddings = create_embeddings(chunks, 'all-MiniLM-L6-v2')
         # Alternatively, use generate directly from HF (returns tensors)
         # embeddings2 = create_embeddings_from_sentence_transformer(documents, 'sentence-transformers/all-MiniLM-L6-v2')

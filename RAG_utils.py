@@ -1,6 +1,7 @@
 from CreateDocuments import load_chunks
 
 import tqdm
+import os
 # embeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
@@ -284,10 +285,10 @@ def gen_text_hf_api(lm_name, prompt_text, temp=0.1, top_k=30, rep_pen=1.03):
     Returns:
         The generated text.
     """
+
     lm = HuggingFaceHub(
         repo_id=lm_name,
         task="text-generation",
-        huggingfacehub_api_token = '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',
         model_kwargs={
             "max_new_tokens": 250,
             "top_k": top_k,

@@ -8,12 +8,8 @@ import os
 # Import yaml_content from config
 from config import yaml_content
 
-# Print the current working directory for debugging purposes
-print("Current Working Directory:", os.getcwd())
-
 # Get the absolute path of the project directory
 project_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-print("Project Path:", project_path)
 
 assert os.getcwd() == project_path
 
