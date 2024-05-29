@@ -25,7 +25,7 @@ if retrieval_selectbox == 'Dense':
     )
     embedding_model_selectbox = st.sidebar.selectbox(
         'Embedding Model',
-        ('Sentence Transformer', )
+        ('all-MiniLM-L6-v2', )
     )
     generator_selectbox = st.sidebar.selectbox(
         'Generator Model',
@@ -34,6 +34,9 @@ if retrieval_selectbox == 'Dense':
 
 st.sidebar.write("Example Questions")
 st.sidebar.write("When was the house at 3524 Redwing Ct, Naperville, IL 60564 last sold and for what price?")
+st.sidebar.write("What other names is morganite known by?")
+st.sidebar.write("What was the original version of 'Life, Liberty, and the Pursuit of Happiness' before it was written in the Declaration of Independence?")
+st.sidebar.write("Who is the author of the book Kapow!?")
 
 
 # Streamed response emulator
@@ -85,7 +88,7 @@ if prompt := st.chat_input("What is up?"):
         minutes, seconds = divmod(execution_time, 60)
         time_display = f"**Execution Time:** {int(minutes)}m {seconds:.2f}s"
     else:
-        time_display = f"Execution Time:** {execution_time:.2f}s"
+        time_display = f"**Execution Time:** {execution_time:.2f}s"
     st.markdown(time_display)
 
     # Add assistant response to chat history
