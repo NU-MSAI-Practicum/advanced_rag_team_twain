@@ -253,8 +253,8 @@ if __name__ == '__main__':
             'generator_funcs': [ollama3_1],
             'sys_msg': """You are a helpful assistant. Answer the user's question in one sentence based on the provided context. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information. Do NOT start your response with "According to the provided context." """,
             'user_msg_template': """Context: {context} Question: {question}""",
-            'sample_size': 1,
-            'filepath': 'evals/es_dense_train_TEST.csv',
+            'sample_size': 100,
+            'filepath': 'evals/es_dense_train100.csv',
             }
     opt3 = Options()
     opt3.make_vars(args3)
